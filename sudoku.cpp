@@ -1,6 +1,8 @@
 #include <iostream>
 #include <string>
 
+enum Line { row, col };
+
 class SudokuSquare
 {
     public: 
@@ -13,10 +15,7 @@ class SudokuSquare
 
 SudokuSquare::SudokuSquare()
 {
-    for (bool note : notes)
-    {
-        note = true; 
-    }
+    for (bool note : notes) { note = true; }
 }
 
 class Sudoku
@@ -32,6 +31,11 @@ class Sudoku
         Sudoku solve();
 
         void draw();
+    
+    private:
+        bool check_squares_valid();
+        bool check_line_valid(int rowNo, Line lineType);
+        bool check_box_valid(int row, int col);
 };
 
 Sudoku::Sudoku()
@@ -56,19 +60,92 @@ Sudoku::Sudoku(int sudoku[9][9])
     }
 }
 
-bool Sudoku::is_valid()
+bool Sudoku::check_squares_valid()
 {
     for (int rows = 0; rows < 9; rows++)
     {
         for (int cols = 0; cols < 9; cols++)
         {
-            if (grid[rows][cols].val > 9 || grid[rows][cols].val < 1)
+            if (grid[rows][cols].val > 9 || grid[rows][cols].val < 0)
             {
                 std::cout << "Invalid sudoku: squares contain values outside 1-9" << std::endl;
                 return false;
             }
         }
     }
+    return true;
+}
+
+bool Sudoku::check_line_valid(int lineNo, Line lineType)
+{
+    bool squares[9];
+    for (int i = 0; i < 9; i++) { squares[i] = false; }
+
+    for (int count = 0; count < 9; count++)
+    {
+        int currSquare = (lineType == Line::row ? grid[lineNo][count].val : grid[count][lineNo].val);
+        if (currSquare == 0) { continue; } //skip this number if square is empty
+        //
+        if (squares[currSquare - 1] == true) { 
+            std::cout << "Error: " << (lineType == Line::row ? "Row " : "Column ") << lineNo + 1 << " contains duplicate numbers." << std::endl;
+            return false; 
+        } else { 
+            squares[currSquare - 1] = true;
+        }
+    }
+
+    return true;
+}
+
+bool Sudoku::check_box_valid(int r, int c)
+{
+    bool squares[9];
+    for (int i = 0; i < 9; i++) { squares[i] = false; }
+
+    for (int row = r * 3; row < ((r * 3) + 3); row++)
+    {
+        for (int col = c * 3; col < ((c * 3) + 3); col++)
+        {
+            int currSquare = grid[row][col].val;
+            if (currSquare == 0) { continue; } //skip this number if square is empty
+
+            if (squares[currSquare - 1] == true) {
+                return false;
+            } else {
+                squares[currSquare - 1] = true;
+            }
+        }
+    }
+    return true;
+}
+
+bool Sudoku::is_valid()
+{
+    //check each square only contains values 1-9 (0 for empty)
+    if (!check_squares_valid()) { return false; }
+    
+    //check there are no duplicate numbers on each row and each column
+    for (int i = 0; i < 9; i++)
+    {
+        if(!check_line_valid(i, Line::row) || !check_line_valid(i, Line::col))
+        {
+            return false;
+        }
+    }
+    
+    //check there are no duplicate numbers in each of the 3x3 boxes
+    for (int row = 0; row < 3; row++)
+    {
+        for (int col = 0; col < 3; col++)
+        {
+            if (!check_box_valid(row, col))
+            {
+                std::cout << "Error: Box (Col " << col + 1 << ", Row " << row + 1 << ") contains duplicate numbers." << std::endl;
+                return false;
+            }
+        }
+    }
+
     return true;
 }
 
@@ -94,9 +171,10 @@ void Sudoku::draw()
             } else { //if square not empty, write its value
                 std::cout << grid[rows][cols].val << " ";
             }
-            }
+        }
         std::cout << std::endl;
     }
+    std::cout << std::endl;
 }
 
 int main()
@@ -117,6 +195,8 @@ int main()
     );
 
     demo.draw();
+
+    std::cout << (demo.is_valid() ? "True" : "False") << std::endl;
 
     return 0;
 }
